@@ -168,22 +168,33 @@ class MobileAlertesIsRainingBinarySensor(MobileAlertesBinarySensor):
     def update_data_from_sensor(self) -> None:
         """Update data from the sensor."""
         value: bool = False
-        time_span_sensor = self._coordinator.get_entity(self._sensor.measurements[2])
-        if time_span_sensor is not None:
-            time_span_sensor.add_dependent(self)
-            if time_span_sensor._attr_native_value is not None:
-                _LOGGER.debug(
-                    "is_raining time_span_sensor is not None %s %s",
-                    time_span_sensor._attr_native_value,
-                    time.ctime(time_span_sensor.last_update),
-                )
-                value = (
-                    (int(time_span_sensor._attr_native_value) == 0) and
-                    (
-                        time_span_sensor.last_update >= 
-                        time.time() - LAST_RAIN_PERIOD
+        try:
+            # Validate that measurements have enough entries
+            if len(self._sensor.measurements) <= 2:
+                _LOGGER.warning("Sensor measurements do not have enough entries.")
+                self._attr_is_on = value
+            return
+
+            # Safely retrieve the time span sensor
+            time_span_sensor = self._coordinator.get_entity(self._sensor.measurements[2])
+            if time_span_sensor is not None:
+                time_span_sensor.add_dependent(self)
+                native_value = getattr(time_span_sensor, "_attr_native_value", None)
+                last_update = getattr(time_span_sensor, "last_update", None)
+
+                if native_value is not None and isinstance(last_update, (int, float)):
+                    _LOGGER.debug(
+                        "is_raining time_span_sensor is not None %s %s",
+                        native_value,
+                        time.ctime(last_update),
                     )
-                )
+                    value = (
+                        int(native_value) == 0
+                        and last_update >= time.time() - LAST_RAIN_PERIOD
+                    )
+        except Exception as e:
+            _LOGGER.error("Error updating data from sensor: %s", e)
+
         self._attr_is_on = value
         _LOGGER.debug("is_raining update_data_from_sensor %s", self._attr_is_on)
 

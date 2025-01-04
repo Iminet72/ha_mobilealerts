@@ -409,7 +409,7 @@ class MobileAlertesPeriodRainSensor(MobileAlertesSensor):
                 )
                 self._last_update = last_rain_time
 
-        for measurement_time in self._measurements.keys():
+        for measurement_time in list(self._measurements.keys()):
             if measurement_time < (now - self._period):
                 _LOGGER.debug(
                     "period_rain update_data_from_sensor removed (%s: %s)",
